@@ -5,31 +5,38 @@ import pickle
 st.set_page_config(page_title="Customer Churn Prediction", layout="centered")
 
 st.title("Customer Churn Prediction App")
-st.write("Enter customer details below to predict whether the customer is likely to churn.")
+st.write("Predict whether a customer is likely to churn.")
 
-# Load trained model
 with open("model.pkl", "rb") as f:
     model = pickle.load(f)
 
-st.header("Customer Input Details")
+st.header("Enter Customer Details")
 
-Age = st.number_input("Age", min_value=18, max_value=100, value=30)
-FrequentFlyer_Encoded = st.selectbox("Frequent Flyer", [0, 1], help="0 = No, 1 = Yes")
-AnnualIncomeClass_Encoded = st.selectbox(
-    "Annual Income Class",
-    [0, 1, 2],
-    help="Use the same encoding as in your notebook"
-)
-ServicesOpted = st.number_input("Services Opted", min_value=1, max_value=10, value=3)
-AccountSyncedToSocialMedia_Encoded = st.selectbox(
-    "Account Synced To Social Media",
-    [0, 1],
-    help="0 = No, 1 = Yes"
-)
-BookedHotelOrNot_Encoded = st.selectbox(
-    "Booked Hotel Or Not",
-    [0, 1],
-    help="0 = No, 1 = Yes"
-)
+age = st.number_input("Age", min_value=18, max_value=100, value=30)
 
-input_df = pd.DataFram
+frequent_flyer = st.selectbox("Frequent Flyer", ["No", "Yes"])
+annual_income = st.selectbox("Annual Income Class", ["Low", "Medium", "High"])
+services_opted = st.number_input("Services Opted", min_value=1, max_value=10, value=3)
+social_media = st.selectbox("Account Synced To Social Media", ["No", "Yes"])
+booked_hotel = st.selectbox("Booked Hotel Or Not", ["No", "Yes"])
+
+input_df = pd.DataFrame([{
+    "Age": age,
+    "FrequentFlyer_Encoded": 1 if frequent_flyer == "Yes" else 0,
+    "AnnualIncomeClass_Encoded": {"Low": 0, "Medium": 1, "High": 2}[annual_income],
+    "ServicesOpted": services_opted,
+    "AccountSyncedToSocialMedia_Encoded": 1 if social_media == "Yes" else 0,
+    "BookedHotelOrNot_Encoded": 1 if booked_hotel == "Yes" else 0
+}])
+
+if st.button("Predict Churn"):
+    try:
+        prediction = model.predict(input_df)[0]
+        probability = model.predict_proba(input_df)[0][1]
+
+        if prediction == 1:
+            st.error(f"Customer is likely to churn. Probability: {probability:.2f}")
+        else:
+            st.success(f"Customer is not likely to churn. Probability: {probability:.2f}")
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
