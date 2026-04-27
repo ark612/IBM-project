@@ -2,7 +2,13 @@ import streamlit as st
 import pandas as pd
 import pickle
 import time
-import plotly.graph_objects as go
+
+# Safe import for plotly
+try:
+    import plotly.graph_objects as go
+    plotly_available = True
+except:
+    plotly_available = False
 
 st.set_page_config(page_title="AI Customer Predictor", layout="wide")
 
@@ -12,6 +18,9 @@ if "history" not in st.session_state:
 
 # ---------------- GAUGE FUNCTION ----------------
 def create_gauge(prob):
+    if not plotly_available:
+        return None
+
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=prob * 100,
@@ -66,11 +75,6 @@ div.stButton > button {
     border-radius: 10px;
     height: 3em;
     border: none;
-    box-shadow: 0 0 15px rgba(56,189,248,0.6);
-    transition: 0.3s;
-}
-div.stButton > button:hover {
-    transform: scale(1.05);
 }
 </style>
 """, unsafe_allow_html=True)
@@ -130,7 +134,6 @@ with tab1:
 
         col1, col2 = st.columns(2)
 
-        # LEFT: TEXT
         with col1:
             if prediction == 1:
                 st.error("❌ Customer will NOT repeat")
@@ -140,21 +143,22 @@ with tab1:
             st.write(f"Repeat Probability: {repeat_prob:.2f}")
             st.write(f"Non-Repeat Probability: {non_repeat_prob:.2f}")
 
-        # RIGHT: GAUGE
         with col2:
-            fig = create_gauge(repeat_prob)
-            st.plotly_chart(fig, use_container_width=True)
+            if plotly_available:
+                fig = create_gauge(repeat_prob)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("Plotly not installed. Showing fallback.")
+                st.progress(repeat_prob)
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # SAVE HISTORY
         st.session_state.history.append({
             "Age": age,
             "Income": annual_income,
             "Services": services_opted,
             "Prediction": "Repeat" if prediction == 0 else "Not Repeat",
-            "Repeat Prob": round(repeat_prob, 2),
-            "Non-Repeat Prob": round(non_repeat_prob, 2)
+            "Repeat Prob": round(repeat_prob, 2)
         })
 
 # ================= TAB 2 =================
@@ -167,33 +171,25 @@ with tab2:
         df = pd.DataFrame(st.session_state.history)
         st.dataframe(df, use_container_width=True)
 
-        # ---------------- GRAPHS ----------------
         st.markdown("### 📊 Analytics")
 
-        st.subheader("📈 Repeat Probability Trend")
         st.line_chart(df["Repeat Prob"])
-
-        st.subheader("📊 Prediction Distribution")
         st.bar_chart(df["Prediction"].value_counts())
 
-        st.subheader("🔍 Services vs Repeat Probability")
-        st.scatter_chart(df[["Services", "Repeat Prob"]])
-
-        # ---------------- DELETE OPTIONS ----------------
         st.markdown("### 🗑️ Manage History")
 
         index_to_delete = st.number_input(
-            "Enter row index to delete",
+            "Row index to delete",
             min_value=0,
             max_value=len(df)-1,
             step=1
         )
 
-        if st.button("❌ Delete Selected Row"):
+        if st.button("❌ Delete Row"):
             st.session_state.history.pop(index_to_delete)
             st.rerun()
 
-        if st.button("🗑️ Clear All History"):
+        if st.button("🗑️ Clear All"):
             st.session_state.history = []
             st.rerun()
 
