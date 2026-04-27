@@ -3,155 +3,139 @@ import pandas as pd
 import pickle
 import time
 
-st.set_page_config(page_title="Customer Churn Prediction", layout="centered")
+st.set_page_config(page_title="AI Churn Predictor", layout="wide")
+
+# ---------------- SESSION STATE ----------------
+if "history" not in st.session_state:
+    st.session_state.history = []
 
 # ---------------- CSS ----------------
 st.markdown("""
 <style>
-
-/* Background */
 .stApp {
     background: radial-gradient(circle at top, #020617, #000);
-    color: #e2e8f0;
+    color: white;
 }
-
-/* Title */
 .title {
     text-align: center;
-    font-size: 36px;
+    font-size: 38px;
     font-weight: bold;
     background: linear-gradient(90deg, #38bdf8, #0ea5e9);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
-
-/* Subtitle */
-.subtitle {
-    text-align: center;
-    color: #64748b;
-    margin-bottom: 20px;
-}
-
-/* Card */
 .card {
     background: rgba(15, 23, 42, 0.6);
     padding: 20px;
     border-radius: 15px;
     border: 1px solid rgba(56,189,248,0.2);
-    box-shadow: 0 0 20px rgba(56,189,248,0.1);
     margin-bottom: 20px;
 }
-
-/* Inputs */
-.stNumberInput input, .stSelectbox {
-    background-color: #020617 !important;
-    color: white !important;
-    border: 1px solid #0ea5e9 !important;
-}
-
-/* Button */
-div.stButton > button {
-    width: 100%;
-    background: linear-gradient(90deg, #0ea5e9, #38bdf8);
-    color: black;
-    font-weight: bold;
-    border-radius: 10px;
-    height: 3em;
-    border: none;
-    box-shadow: 0 0 15px rgba(56,189,248,0.6);
-    transition: 0.3s;
-}
-
-div.stButton > button:hover {
-    transform: scale(1.05);
-}
-
-/* Result */
-.result {
-    padding: 20px;
-    border-radius: 15px;
-    text-align: center;
-    margin-top: 20px;
-}
-
-/* Progress bar */
-.progress-container {
-    background: #020617;
-    border-radius: 10px;
-    height: 15px;
-    margin-top: 10px;
-}
-
-.progress-bar {
-    height: 100%;
-    border-radius: 10px;
-    background: linear-gradient(90deg, #38bdf8, #0ea5e9);
-}
-
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------- HEADER ----------------
-st.markdown('<div class="title">AI Customer Churn Predictor</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">ML-powered prediction • real-time analysis</div>', unsafe_allow_html=True)
+st.markdown('<div class="title">🤖 AI Customer Churn Dashboard</div>', unsafe_allow_html=True)
 
 # ---------------- LOAD MODEL ----------------
 with open("model.pkl", "rb") as f:
     model = pickle.load(f)
 
-# ---------------- INPUT ----------------
-st.markdown('<div class="card">', unsafe_allow_html=True)
+# ---------------- TABS ----------------
+tab1, tab2, tab3 = st.tabs(["🔮 Predict", "📊 Insights", "📜 History"])
 
-st.subheader("Input Parameters")
+# ================= TAB 1 =================
+with tab1:
+    st.markdown("### Enter Customer Details")
 
-col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
 
-with col1:
-    age = st.number_input("Age", min_value=18, max_value=100, value=30)
-    frequent_flyer = st.selectbox("Frequent Flyer", ["No", "Yes"])
-    annual_income = st.selectbox("Annual Income", ["Low", "Medium", "High"])
+    with col1:
+        age = st.number_input("Age", 18, 100, 30)
+        frequent_flyer = st.selectbox("Frequent Flyer", ["No", "Yes"])
+        annual_income = st.selectbox("Income Level", ["Low", "Medium", "High"])
 
-with col2:
-    services_opted = st.number_input("Services Opted", min_value=1, max_value=10, value=3)
-    social_media = st.selectbox("Social Media Linked", ["No", "Yes"])
-    booked_hotel = st.selectbox("Booked Hotel", ["No", "Yes"])
+    with col2:
+        services_opted = st.slider("Services Opted", 1, 10, 3)
+        social_media = st.selectbox("Social Media Linked", ["No", "Yes"])
+        booked_hotel = st.selectbox("Booked Hotel", ["No", "Yes"])
 
-st.markdown('</div>', unsafe_allow_html=True)
+    input_df = pd.DataFrame([{
+        "Age": age,
+        "FrequentFlyer_Encoded": 1 if frequent_flyer == "Yes" else 0,
+        "AnnualIncomeClass_Encoded": {"Low": 0, "Medium": 1, "High": 2}[annual_income],
+        "ServicesOpted": services_opted,
+        "AccountSyncedToSocialMedia_Encoded": 1 if social_media == "Yes" else 0,
+        "BookedHotelOrNot_Encoded": 1 if booked_hotel == "Yes" else 0
+    }])
 
-# ---------------- DATA ----------------
-input_df = pd.DataFrame([{
-    "Age": age,
-    "FrequentFlyer_Encoded": 1 if frequent_flyer == "Yes" else 0,
-    "AnnualIncomeClass_Encoded": {"Low": 0, "Medium": 1, "High": 2}[annual_income],
-    "ServicesOpted": services_opted,
-    "AccountSyncedToSocialMedia_Encoded": 1 if social_media == "Yes" else 0,
-    "BookedHotelOrNot_Encoded": 1 if booked_hotel == "Yes" else 0
-}])
+    if st.button("🚀 Predict"):
 
-# ---------------- PREDICT ----------------
-if st.button("Analyze Customer"):
+        with st.spinner("Running AI model..."):
+            time.sleep(1)
 
-    with st.spinner("Running AI model..."):
-        time.sleep(1)
+        prediction = model.predict(input_df)[0]
+        probability = model.predict_proba(input_df)[0][1]
 
-    prediction = model.predict(input_df)[0]
-    probability = model.predict_proba(input_df)[0][1]
+        percent = int(probability * 100)
 
-    percent = int(probability * 100)
+        st.markdown("### 📊 Result")
+        st.progress(percent / 100)
 
-    st.markdown('<div class="card result">', unsafe_allow_html=True)
+        if prediction == 1:
+            st.error(f"High Risk of Churn ({percent}%)")
+        else:
+            st.success(f"Low Risk ({percent}%)")
 
-    st.markdown(f"<h1 style='color:#38bdf8'>{percent}%</h1>", unsafe_allow_html=True)
+        # Save history
+        st.session_state.history.append({
+            "Age": age,
+            "Income": annual_income,
+            "Services": services_opted,
+            "Risk %": percent
+        })
 
-    st.markdown(f"""
-    <div class="progress-container">
-        <div class="progress-bar" style="width:{percent}%"></div>
-    </div>
-    """, unsafe_allow_html=True)
+# ================= TAB 2 =================
+with tab2:
+    st.markdown("### 🧠 AI Insights")
 
-    if prediction == 1:
-        st.write("⚠️ High Risk of Churn")
+    st.markdown("#### Why this prediction?")
+
+    reasons = []
+
+    if services_opted < 3:
+        reasons.append("Low engagement (few services used)")
+    if frequent_flyer == "No":
+        reasons.append("Not a frequent flyer")
+    if annual_income == "Low":
+        reasons.append("Lower income segment")
+    if booked_hotel == "No":
+        reasons.append("No hotel bookings")
+
+    if reasons:
+        for r in reasons:
+            st.write(f"• {r}")
     else:
-        st.write("✅ Customer Likely to Stay")
+        st.write("Customer shows strong engagement.")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("---")
+
+    st.markdown("#### What-if Analysis")
+
+    test_services = st.slider("Change Services Opted", 1, 10, 5)
+
+    test_df = input_df.copy()
+    test_df["ServicesOpted"] = test_services
+
+    new_prob = model.predict_proba(test_df)[0][1]
+    st.write(f"New churn probability: {new_prob:.2f}")
+
+# ================= TAB 3 =================
+with tab3:
+    st.markdown("### 📜 Prediction History")
+
+    if st.session_state.history:
+        df = pd.DataFrame(st.session_state.history)
+        st.dataframe(df)
+    else:
+        st.write("No predictions yet.")
