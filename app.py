@@ -2,12 +2,39 @@ import streamlit as st
 import pandas as pd
 import pickle
 import time
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="AI Customer Predictor", layout="wide")
 
 # ---------------- SESSION STATE ----------------
 if "history" not in st.session_state:
     st.session_state.history = []
+
+# ---------------- GAUGE FUNCTION ----------------
+def create_gauge(prob):
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=prob * 100,
+        number={'suffix': "%"},
+        title={'text': "Repeat Probability"},
+        gauge={
+            'axis': {'range': [0, 100]},
+            'bar': {'color': "#38bdf8"},
+            'bgcolor': "#020617",
+            'steps': [
+                {'range': [0, 40], 'color': "#1e293b"},
+                {'range': [40, 70], 'color': "#334155"},
+                {'range': [70, 100], 'color': "#0ea5e9'},
+            ],
+        }
+    ))
+
+    fig.update_layout(
+        paper_bgcolor="#020617",
+        font={'color': "white"}
+    )
+
+    return fig
 
 # ---------------- CSS ----------------
 st.markdown("""
@@ -45,23 +72,6 @@ div.stButton > button {
 div.stButton > button:hover {
     transform: scale(1.05);
 }
-.progress-container {
-    background: #020617;
-    border-radius: 10px;
-    height: 15px;
-    margin-top: 10px;
-}
-.progress-bar {
-    height: 100%;
-    border-radius: 10px;
-    background: linear-gradient(90deg, #38bdf8, #0ea5e9);
-}
-.result {
-    text-align: center;
-    padding: 20px;
-    border-radius: 15px;
-    margin-top: 15px;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -96,7 +106,6 @@ with tab1:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ---------------- DATA ----------------
     input_df = pd.DataFrame([{
         "Age": age,
         "FrequentFlyer_Encoded": 1 if frequent_flyer == "Yes" else 0,
@@ -106,7 +115,6 @@ with tab1:
         "BookedHotelOrNot_Encoded": 1 if booked_hotel == "Yes" else 0
     }])
 
-    # ---------------- PREDICT ----------------
     if st.button("🚀 Predict"):
 
         with st.spinner("Running AI model..."):
@@ -118,34 +126,28 @@ with tab1:
         repeat_prob = 1 - probability
         non_repeat_prob = probability
 
-        st.markdown('<div class="card result">', unsafe_allow_html=True)
+        st.markdown('<div class="card">', unsafe_allow_html=True)
 
-        # Result
-        if prediction == 1:
-            st.error("❌ Customer will NOT repeat")
-        else:
-            st.success("✅ Customer will REPEAT")
+        col1, col2 = st.columns(2)
 
-        # Probabilities
-        st.write("### 📊 Prediction Confidence")
+        # LEFT: TEXT
+        with col1:
+            if prediction == 1:
+                st.error("❌ Customer will NOT repeat")
+            else:
+                st.success("✅ Customer will REPEAT")
 
-        st.write(f"Repeat Probability: {repeat_prob:.2f}")
-        st.markdown(f"""
-        <div class="progress-container">
-            <div class="progress-bar" style="width:{int(repeat_prob*100)}%"></div>
-        </div>
-        """, unsafe_allow_html=True)
+            st.write(f"Repeat Probability: {repeat_prob:.2f}")
+            st.write(f"Non-Repeat Probability: {non_repeat_prob:.2f}")
 
-        st.write(f"Non-Repeat Probability: {non_repeat_prob:.2f}")
-        st.markdown(f"""
-        <div class="progress-container">
-            <div class="progress-bar" style="width:{int(non_repeat_prob*100)}%"></div>
-        </div>
-        """, unsafe_allow_html=True)
+        # RIGHT: GAUGE
+        with col2:
+            fig = create_gauge(repeat_prob)
+            st.plotly_chart(fig, use_container_width=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Save history
+        # SAVE HISTORY
         st.session_state.history.append({
             "Age": age,
             "Income": annual_income,
@@ -163,7 +165,6 @@ with tab2:
     if st.session_state.history:
 
         df = pd.DataFrame(st.session_state.history)
-
         st.dataframe(df, use_container_width=True)
 
         # ---------------- GRAPHS ----------------
