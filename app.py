@@ -96,6 +96,7 @@ with tab1:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # ---------------- DATA ----------------
     input_df = pd.DataFrame([{
         "Age": age,
         "FrequentFlyer_Encoded": 1 if frequent_flyer == "Yes" else 0,
@@ -105,6 +106,7 @@ with tab1:
         "BookedHotelOrNot_Encoded": 1 if booked_hotel == "Yes" else 0
     }])
 
+    # ---------------- PREDICT ----------------
     if st.button("🚀 Predict"):
 
         with st.spinner("Running AI model..."):
@@ -118,11 +120,13 @@ with tab1:
 
         st.markdown('<div class="card result">', unsafe_allow_html=True)
 
+        # Result
         if prediction == 1:
             st.error("❌ Customer will NOT repeat")
         else:
             st.success("✅ Customer will REPEAT")
 
+        # Probabilities
         st.write("### 📊 Prediction Confidence")
 
         st.write(f"Repeat Probability: {repeat_prob:.2f}")
