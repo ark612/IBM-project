@@ -62,10 +62,6 @@ div.stButton > button:hover {
     border-radius: 15px;
     margin-top: 15px;
 }
-.delete-btn button {
-    background: red !important;
-    color: white !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -145,6 +141,7 @@ with tab1:
 
         st.markdown('</div>', unsafe_allow_html=True)
 
+        # Save history
         st.session_state.history.append({
             "Age": age,
             "Income": annual_income,
@@ -163,12 +160,23 @@ with tab2:
 
         df = pd.DataFrame(st.session_state.history)
 
-        # Show table
         st.dataframe(df, use_container_width=True)
 
+        # ---------------- GRAPHS ----------------
+        st.markdown("### 📊 Analytics")
+
+        st.subheader("📈 Repeat Probability Trend")
+        st.line_chart(df["Repeat Prob"])
+
+        st.subheader("📊 Prediction Distribution")
+        st.bar_chart(df["Prediction"].value_counts())
+
+        st.subheader("🔍 Services vs Repeat Probability")
+        st.scatter_chart(df[["Services", "Repeat Prob"]])
+
+        # ---------------- DELETE OPTIONS ----------------
         st.markdown("### 🗑️ Manage History")
 
-        # Delete specific row
         index_to_delete = st.number_input(
             "Enter row index to delete",
             min_value=0,
@@ -178,13 +186,10 @@ with tab2:
 
         if st.button("❌ Delete Selected Row"):
             st.session_state.history.pop(index_to_delete)
-            st.success("Entry deleted!")
             st.rerun()
 
-        # Clear all
         if st.button("🗑️ Clear All History"):
             st.session_state.history = []
-            st.success("All history cleared!")
             st.rerun()
 
     else:
