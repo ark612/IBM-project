@@ -16,7 +16,6 @@ st.markdown("""
     background: radial-gradient(circle at top, #020617, #000);
     color: white;
 }
-
 .title {
     text-align: center;
     font-size: 40px;
@@ -25,7 +24,6 @@ st.markdown("""
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
-
 .card {
     background: rgba(15, 23, 42, 0.6);
     padding: 20px;
@@ -33,8 +31,6 @@ st.markdown("""
     border: 1px solid rgba(56,189,248,0.2);
     margin-bottom: 20px;
 }
-
-/* Button */
 div.stButton > button {
     width: 100%;
     background: linear-gradient(90deg, #0ea5e9, #38bdf8);
@@ -49,8 +45,6 @@ div.stButton > button {
 div.stButton > button:hover {
     transform: scale(1.05);
 }
-
-/* Progress bar */
 .progress-container {
     background: #020617;
     border-radius: 10px;
@@ -62,13 +56,15 @@ div.stButton > button:hover {
     border-radius: 10px;
     background: linear-gradient(90deg, #38bdf8, #0ea5e9);
 }
-
-/* Result box */
 .result {
     text-align: center;
     padding: 20px;
     border-radius: 15px;
     margin-top: 15px;
+}
+.delete-btn button {
+    background: red !important;
+    color: white !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -104,7 +100,6 @@ with tab1:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ---------------- DATA ----------------
     input_df = pd.DataFrame([{
         "Age": age,
         "FrequentFlyer_Encoded": 1 if frequent_flyer == "Yes" else 0,
@@ -114,7 +109,6 @@ with tab1:
         "BookedHotelOrNot_Encoded": 1 if booked_hotel == "Yes" else 0
     }])
 
-    # ---------------- PREDICT ----------------
     if st.button("🚀 Predict"):
 
         with st.spinner("Running AI model..."):
@@ -128,16 +122,13 @@ with tab1:
 
         st.markdown('<div class="card result">', unsafe_allow_html=True)
 
-        # Prediction Result
         if prediction == 1:
             st.error("❌ Customer will NOT repeat")
         else:
             st.success("✅ Customer will REPEAT")
 
-        # ---------------- PROBABILITY DISPLAY ----------------
         st.write("### 📊 Prediction Confidence")
 
-        # Repeat bar
         st.write(f"Repeat Probability: {repeat_prob:.2f}")
         st.markdown(f"""
         <div class="progress-container">
@@ -145,7 +136,6 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-        # Non-repeat bar
         st.write(f"Non-Repeat Probability: {non_repeat_prob:.2f}")
         st.markdown(f"""
         <div class="progress-container">
@@ -155,7 +145,6 @@ with tab1:
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Save history
         st.session_state.history.append({
             "Age": age,
             "Income": annual_income,
@@ -171,7 +160,32 @@ with tab2:
     st.markdown("### 📜 Prediction History")
 
     if st.session_state.history:
+
         df = pd.DataFrame(st.session_state.history)
+
+        # Show table
         st.dataframe(df, use_container_width=True)
+
+        st.markdown("### 🗑️ Manage History")
+
+        # Delete specific row
+        index_to_delete = st.number_input(
+            "Enter row index to delete",
+            min_value=0,
+            max_value=len(df)-1,
+            step=1
+        )
+
+        if st.button("❌ Delete Selected Row"):
+            st.session_state.history.pop(index_to_delete)
+            st.success("Entry deleted!")
+            st.rerun()
+
+        # Clear all
+        if st.button("🗑️ Clear All History"):
+            st.session_state.history = []
+            st.success("All history cleared!")
+            st.rerun()
+
     else:
         st.write("No predictions yet.")
