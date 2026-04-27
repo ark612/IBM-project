@@ -1,7 +1,9 @@
 import streamlit as st
+import pandas as pd
+import pickle
 import time
 
-st.set_page_config(page_title="Attendance Risk Predictor", layout="centered")
+st.set_page_config(page_title="Customer Churn Prediction", layout="centered")
 
 # ---------------- CSS ----------------
 st.markdown("""
@@ -9,14 +11,14 @@ st.markdown("""
 
 /* Background */
 .stApp {
-    background: radial-gradient(circle at top, #020617, #020617 40%, #000000);
+    background: radial-gradient(circle at top, #020617, #000);
     color: #e2e8f0;
 }
 
 /* Title */
 .title {
     text-align: center;
-    font-size: 40px;
+    font-size: 36px;
     font-weight: bold;
     background: linear-gradient(90deg, #38bdf8, #0ea5e9);
     -webkit-background-clip: text;
@@ -27,10 +29,10 @@ st.markdown("""
 .subtitle {
     text-align: center;
     color: #64748b;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
 }
 
-/* Glass card */
+/* Card */
 .card {
     background: rgba(15, 23, 42, 0.6);
     padding: 20px;
@@ -41,7 +43,7 @@ st.markdown("""
 }
 
 /* Inputs */
-input, .stNumberInput input {
+.stNumberInput input, .stSelectbox {
     background-color: #020617 !important;
     color: white !important;
     border: 1px solid #0ea5e9 !important;
@@ -49,6 +51,7 @@ input, .stNumberInput input {
 
 /* Button */
 div.stButton > button {
+    width: 100%;
     background: linear-gradient(90deg, #0ea5e9, #38bdf8);
     color: black;
     font-weight: bold;
@@ -63,31 +66,12 @@ div.stButton > button:hover {
     transform: scale(1.05);
 }
 
-/* Stats boxes */
-.stat-box {
-    text-align: center;
-    padding: 15px;
-    border-radius: 12px;
-    background: rgba(2,6,23,0.8);
-    border: 1px solid rgba(56,189,248,0.3);
-}
-
-.stat-number {
-    font-size: 26px;
-    color: #38bdf8;
-    font-weight: bold;
-}
-
-/* Result card */
+/* Result */
 .result {
-    padding: 25px;
+    padding: 20px;
     border-radius: 15px;
     text-align: center;
-}
-
-.warning {
-    background: rgba(59,130,246,0.15);
-    border: 1px solid #3b82f6;
+    margin-top: 20px;
 }
 
 /* Progress bar */
@@ -108,58 +92,66 @@ div.stButton > button:hover {
 """, unsafe_allow_html=True)
 
 # ---------------- HEADER ----------------
-st.markdown('<div class="title">Attendance Risk Predictor</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">ML-powered academic analytics • real-time projection</div>', unsafe_allow_html=True)
+st.markdown('<div class="title">AI Customer Churn Predictor</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">ML-powered prediction • real-time analysis</div>', unsafe_allow_html=True)
+
+# ---------------- LOAD MODEL ----------------
+with open("model.pkl", "rb") as f:
+    model = pickle.load(f)
 
 # ---------------- INPUT ----------------
 st.markdown('<div class="card">', unsafe_allow_html=True)
 
-total = st.number_input("Total Classes Conducted", value=80)
-attended = st.number_input("Classes Attended", value=50)
-remaining = st.number_input("Remaining Classes", value=20)
-planned_leave = st.number_input("Planned Absences", value=0)
+st.subheader("Input Parameters")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    age = st.number_input("Age", min_value=18, max_value=100, value=30)
+    frequent_flyer = st.selectbox("Frequent Flyer", ["No", "Yes"])
+    annual_income = st.selectbox("Annual Income", ["Low", "Medium", "High"])
+
+with col2:
+    services_opted = st.number_input("Services Opted", min_value=1, max_value=10, value=3)
+    social_media = st.selectbox("Social Media Linked", ["No", "Yes"])
+    booked_hotel = st.selectbox("Booked Hotel", ["No", "Yes"])
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- STATS ----------------
-col1, col2, col3 = st.columns(3)
+# ---------------- DATA ----------------
+input_df = pd.DataFrame([{
+    "Age": age,
+    "FrequentFlyer_Encoded": 1 if frequent_flyer == "Yes" else 0,
+    "AnnualIncomeClass_Encoded": {"Low": 0, "Medium": 1, "High": 2}[annual_income],
+    "ServicesOpted": services_opted,
+    "AccountSyncedToSocialMedia_Encoded": 1 if social_media == "Yes" else 0,
+    "BookedHotelOrNot_Encoded": 1 if booked_hotel == "Yes" else 0
+}])
 
-with col1:
-    st.markdown(f'<div class="stat-box"><div class="stat-number">{attended}</div>Classes Attended</div>', unsafe_allow_html=True)
+# ---------------- PREDICT ----------------
+if st.button("Analyze Customer"):
 
-with col2:
-    st.markdown(f'<div class="stat-box"><div class="stat-number">{remaining}</div>Remaining</div>', unsafe_allow_html=True)
+    with st.spinner("Running AI model..."):
+        time.sleep(1)
 
-with col3:
-    will_attend = remaining - planned_leave
-    st.markdown(f'<div class="stat-box"><div class="stat-number">{will_attend}</div>Will Attend</div>', unsafe_allow_html=True)
+    prediction = model.predict(input_df)[0]
+    probability = model.predict_proba(input_df)[0][1]
 
-# ---------------- CALCULATION ----------------
-future_attended = attended + will_attend
-future_total = total + remaining
+    percent = int(probability * 100)
 
-attendance_percent = (future_attended / future_total) * 100
+    st.markdown('<div class="card result">', unsafe_allow_html=True)
 
-# ---------------- BUTTON ----------------
-if st.button("Analyze Risk"):
+    st.markdown(f"<h1 style='color:#38bdf8'>{percent}%</h1>", unsafe_allow_html=True)
 
-    with st.spinner("Analyzing future attendance..."):
-        time.sleep(1.2)
-
-    st.markdown('<div class="card result warning">', unsafe_allow_html=True)
-
-    st.markdown(f"<h1 style='color:#38bdf8'>{attendance_percent:.2f}%</h1>", unsafe_allow_html=True)
-
-    # Progress bar
     st.markdown(f"""
     <div class="progress-container">
-        <div class="progress-bar" style="width:{attendance_percent}%"></div>
+        <div class="progress-bar" style="width:{percent}%"></div>
     </div>
     """, unsafe_allow_html=True)
 
-    if attendance_percent < 75:
-        st.write("⚠️ You are below the safe threshold (75%). Improve attendance.")
+    if prediction == 1:
+        st.write("⚠️ High Risk of Churn")
     else:
-        st.write("✅ You are safe. Keep it consistent.")
+        st.write("✅ Customer Likely to Stay")
 
     st.markdown('</div>', unsafe_allow_html=True)
