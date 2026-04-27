@@ -24,7 +24,7 @@ def create_gauge(prob):
             'steps': [
                 {'range': [0, 40], 'color': "#1e293b"},
                 {'range': [40, 70], 'color': "#334155"},
-                {'range': [70, 100], 'color': "#0ea5e9'},
+                {'range': [70, 100], 'color': "#0ea5e9"},
             ],
         }
     ))
