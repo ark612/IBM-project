@@ -3,7 +3,7 @@ import pandas as pd
 import pickle
 import time
 
-st.set_page_config(page_title="AI Churn Predictor", layout="wide")
+st.set_page_config(page_title="AI Customer Predictor", layout="wide")
 
 # ---------------- SESSION STATE ----------------
 if "history" not in st.session_state:
@@ -16,14 +16,16 @@ st.markdown("""
     background: radial-gradient(circle at top, #020617, #000);
     color: white;
 }
+
 .title {
     text-align: center;
-    font-size: 38px;
+    font-size: 40px;
     font-weight: bold;
     background: linear-gradient(90deg, #38bdf8, #0ea5e9);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
+
 .card {
     background: rgba(15, 23, 42, 0.6);
     padding: 20px;
@@ -31,22 +33,62 @@ st.markdown("""
     border: 1px solid rgba(56,189,248,0.2);
     margin-bottom: 20px;
 }
+
+/* Button */
+div.stButton > button {
+    width: 100%;
+    background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+    color: black;
+    font-weight: bold;
+    border-radius: 10px;
+    height: 3em;
+    border: none;
+    box-shadow: 0 0 15px rgba(56,189,248,0.6);
+    transition: 0.3s;
+}
+div.stButton > button:hover {
+    transform: scale(1.05);
+}
+
+/* Progress bar */
+.progress-container {
+    background: #020617;
+    border-radius: 10px;
+    height: 15px;
+    margin-top: 10px;
+}
+.progress-bar {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+}
+
+/* Result box */
+.result {
+    text-align: center;
+    padding: 20px;
+    border-radius: 15px;
+    margin-top: 15px;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------- HEADER ----------------
-st.markdown('<div class="title">🤖 AI Customer Churn Dashboard</div>', unsafe_allow_html=True)
+st.markdown('<div class="title">🤖 AI Customer Prediction Dashboard</div>', unsafe_allow_html=True)
+st.write("### Predict whether a customer will repeat or not")
 
 # ---------------- LOAD MODEL ----------------
 with open("model.pkl", "rb") as f:
     model = pickle.load(f)
 
 # ---------------- TABS ----------------
-tab1, tab2, tab3 = st.tabs(["🔮 Predict", "📊 Insights", "📜 History"])
+tab1, tab2 = st.tabs(["🔮 Predict", "📜 History"])
 
 # ================= TAB 1 =================
 with tab1:
-    st.markdown("### Enter Customer Details")
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("🧾 Customer Details")
 
     col1, col2 = st.columns(2)
 
@@ -60,6 +102,9 @@ with tab1:
         social_media = st.selectbox("Social Media Linked", ["No", "Yes"])
         booked_hotel = st.selectbox("Booked Hotel", ["No", "Yes"])
 
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ---------------- DATA ----------------
     input_df = pd.DataFrame([{
         "Age": age,
         "FrequentFlyer_Encoded": 1 if frequent_flyer == "Yes" else 0,
@@ -69,6 +114,7 @@ with tab1:
         "BookedHotelOrNot_Encoded": 1 if booked_hotel == "Yes" else 0
     }])
 
+    # ---------------- PREDICT ----------------
     if st.button("🚀 Predict"):
 
         with st.spinner("Running AI model..."):
@@ -77,65 +123,55 @@ with tab1:
         prediction = model.predict(input_df)[0]
         probability = model.predict_proba(input_df)[0][1]
 
-        percent = int(probability * 100)
+        repeat_prob = 1 - probability
+        non_repeat_prob = probability
 
-        st.markdown("### 📊 Result")
-        st.progress(percent / 100)
+        st.markdown('<div class="card result">', unsafe_allow_html=True)
 
+        # Prediction Result
         if prediction == 1:
-            st.error(f"High Risk of Churn ({percent}%)")
+            st.error("❌ Customer will NOT repeat")
         else:
-            st.success(f"Low Risk ({percent}%)")
+            st.success("✅ Customer will REPEAT")
+
+        # ---------------- PROBABILITY DISPLAY ----------------
+        st.write("### 📊 Prediction Confidence")
+
+        # Repeat bar
+        st.write(f"Repeat Probability: {repeat_prob:.2f}")
+        st.markdown(f"""
+        <div class="progress-container">
+            <div class="progress-bar" style="width:{int(repeat_prob*100)}%"></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Non-repeat bar
+        st.write(f"Non-Repeat Probability: {non_repeat_prob:.2f}")
+        st.markdown(f"""
+        <div class="progress-container">
+            <div class="progress-bar" style="width:{int(non_repeat_prob*100)}%"></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # Save history
         st.session_state.history.append({
             "Age": age,
             "Income": annual_income,
             "Services": services_opted,
-            "Risk %": percent
+            "Prediction": "Repeat" if prediction == 0 else "Not Repeat",
+            "Repeat Prob": round(repeat_prob, 2),
+            "Non-Repeat Prob": round(non_repeat_prob, 2)
         })
 
 # ================= TAB 2 =================
 with tab2:
-    st.markdown("### 🧠 AI Insights")
 
-    st.markdown("#### Why this prediction?")
-
-    reasons = []
-
-    if services_opted < 3:
-        reasons.append("Low engagement (few services used)")
-    if frequent_flyer == "No":
-        reasons.append("Not a frequent flyer")
-    if annual_income == "Low":
-        reasons.append("Lower income segment")
-    if booked_hotel == "No":
-        reasons.append("No hotel bookings")
-
-    if reasons:
-        for r in reasons:
-            st.write(f"• {r}")
-    else:
-        st.write("Customer shows strong engagement.")
-
-    st.markdown("---")
-
-    st.markdown("#### What-if Analysis")
-
-    test_services = st.slider("Change Services Opted", 1, 10, 5)
-
-    test_df = input_df.copy()
-    test_df["ServicesOpted"] = test_services
-
-    new_prob = model.predict_proba(test_df)[0][1]
-    st.write(f"New churn probability: {new_prob:.2f}")
-
-# ================= TAB 3 =================
-with tab3:
     st.markdown("### 📜 Prediction History")
 
     if st.session_state.history:
         df = pd.DataFrame(st.session_state.history)
-        st.dataframe(df)
+        st.dataframe(df, use_container_width=True)
     else:
         st.write("No predictions yet.")
